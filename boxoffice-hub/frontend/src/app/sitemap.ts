@@ -3,11 +3,9 @@ import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
-interface SitemapMovieItem {
-  movie: {
-    slug: string;
-    last_updated_at?: string | null;
-  };
+interface SlugItem {
+  slug: string;
+  last_updated_at?: string | null;
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -16,7 +14,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const proto = h.get("x-forwarded-proto") || "https";
   const detectedUrl = host ? `${proto}://${host}` : "https://movieall-vert.vercel.app";
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || detectedUrl).replace(/\/+$/, "");
-  const backendUrl = (process.env.BACKEND_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
 
   const baseEntries: MetadataRoute.Sitemap = [
     {
@@ -33,21 +30,36 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  try {
-    const res = await fetch(`${backendUrl}/api/movies`, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(9000),
-    });
-    if (!res.ok) return baseEntries;
-    const movies = (await res.json()) as SitemapMovieItem[];
-    const movieEntries: MetadataRoute.Sitemap = movies.map((item) => ({
-      url: `${siteUrl}/movie/${item.movie.slug}`,
-      lastModified: item.movie.last_updated_at ? new Date(item.movie.last_updated_at) : new Date(),
-      changeFrequency: "hourly",
-      priority: 0.9,
-    }));
-    return [...baseEntries, ...movieEntries];
-  } catch {
-    return baseEntries;
+  const candidates: string[] = [];
+  if (process.env.BACKEND_URL) {
+    candidates.push(`${process.env.BACKEND_URL.replace(/\/+$/, "")}/api/movies/slugs`);
   }
+  if (host) {
+    candidates.push(`${siteUrl}/api/movies/slugs`);
+  }
+  candidates.push("http://127.0.0.1:8000/api/movies/slugs");
+
+  for (const endpoint of candidates) {
+    try {
+      const res = await fetch(endpoint, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(7000),
+      });
+      if (!res.ok) continue;
+      const items = (await res.json()) as SlugItem[];
+      if (!Array.isArray(items) || items.length === 0) continue;
+
+      const movieEntries: MetadataRoute.Sitemap = items.map((item) => ({
+        url: `${siteUrl}/movie/${item.slug}`,
+        lastModified: item.last_updated_at ? new Date(item.last_updated_at) : new Date(),
+        changeFrequency: "hourly",
+        priority: 0.9,
+      }));
+      return [...baseEntries, ...movieEntries];
+    } catch {
+      continue;
+    }
+  }
+
+  return baseEntries;
 }

@@ -261,6 +261,18 @@ def sync_india_catalog(db: Session = Depends(get_db)):
     return SyncCatalogResponse(**stats)
 
 
+@router.get("/slugs")
+def list_movie_slugs(db: Session = Depends(get_db)):
+    rows = db.query(Movie.slug, Movie.last_updated_at).order_by(Movie.release_date.desc()).all()
+    return [
+        {
+            "slug": r.slug,
+            "last_updated_at": r.last_updated_at.isoformat() if r.last_updated_at else None,
+        }
+        for r in rows
+    ]
+
+
 @router.get("/{slug}", response_model=MovieDetailOut)
 def get_movie_detail(slug: str, day: int | None = None, db: Session = Depends(get_db)):
     movie = db.query(Movie).filter(Movie.slug == slug).first()
