@@ -14,7 +14,7 @@ const jakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://boxoffice-hub.vercel.app";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://movieall-vert.vercel.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

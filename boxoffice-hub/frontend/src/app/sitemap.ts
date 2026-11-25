@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,11 @@ interface SitemapMovieItem {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://boxoffice-hub.vercel.app").replace(/\/+$/, "");
+  const h = await headers();
+  const host = h.get("x-forwarded-host") || h.get("host");
+  const proto = h.get("x-forwarded-proto") || "https";
+  const detectedUrl = host ? `${proto}://${host}` : "https://movieall-vert.vercel.app";
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || detectedUrl).replace(/\/+$/, "");
   const backendUrl = (process.env.BACKEND_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
 
   const baseEntries: MetadataRoute.Sitemap = [
@@ -31,7 +36,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const res = await fetch(`${backendUrl}/api/movies`, {
       cache: "no-store",
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(9000),
     });
     if (!res.ok) return baseEntries;
     const movies = (await res.json()) as SitemapMovieItem[];
