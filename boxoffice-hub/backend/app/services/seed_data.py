@@ -3,7 +3,14 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.config.review_channels import REVIEW_CHANNELS
-from app.models import AdvanceBooking, DailyBreakdown, DailySummary, Movie, YoutubeReview
+from app.models import AdvanceBooking, DailyBreakdown, DailySummary, Movie, MoviePoll, YoutubeReview
+
+REAL_POSTERS = {
+    "pushpa-2-the-rule": "https://m.media-amazon.com/images/M/MV5BNDM3N2UzM2UtMjEwMC00NGUzLThmMmQtNGMyM2VmMDA0ZWEwXkEyXkFqcGc@._V1_.jpg",
+    "daaku-maharaaj": "https://m.media-amazon.com/images/M/MV5BZmE4MjAxYTAtYzU2NS00ZjhjLTk4NjMtZjZhNzYxNWU4NjE2XkEyXkFqcGc@._V1_.jpg",
+    "game-changer": "https://m.media-amazon.com/images/M/MV5BNjU3YmQ5MjQtNmQwYy00MDdlLWI4MjMtMjJkNjhjNWQ4NDExXkEyXkFqcGc@._V1_.jpg",
+    "kalki-2898-ad": "https://m.media-amazon.com/images/M/MV5BMTM3ZGUwYTEtZTI5NS00ZmMyLTk2YmQtMWU4YjlhZTI3NjRjXkEyXkFqcGc@._V1_.jpg",
+}
 
 CRORE = 10_000_000.0
 
@@ -263,6 +270,15 @@ def build_breakdowns_for_day(
 
 def seed_database(db: Session) -> None:
     if db.query(Movie).count() > 0:
+        # Repair legacy TMDB poster URLs on existing DBs so images always load reliably
+        updated = False
+        for slug, real_url in REAL_POSTERS.items():
+            m = db.query(Movie).filter(Movie.slug == slug).first()
+            if m and (not m.poster_url or "image.tmdb.org" in m.poster_url):
+                m.poster_url = real_url
+                updated = True
+        if updated:
+            db.commit()
         return
 
     now = datetime.now(timezone.utc)
@@ -276,7 +292,7 @@ def seed_database(db: Session) -> None:
             "cast": ["Allu Arjun", "Rashmika Mandanna", "Fahadh Faasil", "Jagapathi Babu"],
             "genres": ["Action", "Drama", "Thriller"],
             "languages": ["Telugu", "Hindi", "Tamil", "Malayalam", "Kannada"],
-            "poster_url": "https://image.tmdb.org/t/p/w500/bGLG3rrpOWffo0pz5AkG0K7Vhfe.jpg",
+            "poster_url": REAL_POSTERS["pushpa-2-the-rule"],
             "trailer_video_id": "g3JUbgOHgdw",
             "trailer_meta": {
                 "title": "Pushpa 2: The Rule Official Trailer | Allu Arjun | Sukumar | Rashmika Mandanna | DSP",
@@ -346,7 +362,7 @@ def seed_database(db: Session) -> None:
             "cast": ["Nandamuri Balakrishna", "Bobby Deol", "Pragya Jaiswal", "Shraddha Srinath"],
             "genres": ["Action", "Drama"],
             "languages": ["Telugu", "Hindi"],
-            "poster_url": "https://image.tmdb.org/t/p/w500/wA64z4M26f390lN9M4bN03tV3gE.jpg",
+            "poster_url": REAL_POSTERS["daaku-maharaaj"],
             "trailer_video_id": "fNDRSver0uM",
             "trailer_meta": {
                 "title": "Daaku Maharaaj Theatrical Trailer | Nandamuri Balakrishna | Bobby Kolli | Thaman S",
@@ -398,7 +414,7 @@ def seed_database(db: Session) -> None:
             "cast": ["Ram Charan", "Kiara Advani", "S. J. Suryah", "Anjali"],
             "genres": ["Action", "Political", "Drama"],
             "languages": ["Telugu", "Hindi", "Tamil"],
-            "poster_url": "https://image.tmdb.org/t/p/w500/aaNngewrVUNykXwDLLSoBa59BcF.jpg",
+            "poster_url": REAL_POSTERS["game-changer"],
             "trailer_video_id": "5lpfyGSQXbQ",
             "trailer_meta": {
                 "title": "Game Changer Official Trailer | Ram Charan | Kiara Advani | Shankar | Thaman S",
@@ -455,7 +471,7 @@ def seed_database(db: Session) -> None:
             "cast": ["Prabhas", "Amitabh Bachchan", "Kamal Haasan", "Deepika Padukone"],
             "genres": ["Sci-Fi", "Mythology", "Action"],
             "languages": ["Telugu", "Hindi", "Tamil", "Malayalam", "Kannada"],
-            "poster_url": "https://image.tmdb.org/t/p/w500/rstcALK1L4J2wR3d5zS9w9Q0f2k.jpg",
+            "poster_url": REAL_POSTERS["kalki-2898-ad"],
             "trailer_video_id": "y1-w1kUGuz8",
             "trailer_meta": {
                 "title": "Kalki 2898 AD Release Trailer | Prabhas | Amitabh Bachchan | Kamal Haasan | Nag Ashwin",

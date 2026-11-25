@@ -58,6 +58,27 @@ class Movie(Base):
         cascade="all, delete-orphan",
         order_by="YoutubeReview.view_count.desc()",
     )
+    poll = relationship(
+        "MoviePoll",
+        back_populates="movie",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+
+class MoviePoll(Base):
+    __tablename__ = "movie_polls"
+
+    id = Column(Integer, primary_key=True, index=True)
+    movie_id = Column(Integer, ForeignKey("movies.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
+    rating_sum = Column(Float, nullable=False, default=0.0)
+    rating_count = Column(Integer, nullable=False, default=0)
+    theatre_votes = Column(Integer, nullable=False, default=0)
+    ott_votes = Column(Integer, nullable=False, default=0)
+    skip_votes = Column(Integer, nullable=False, default=0)
+    updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+    movie = relationship("Movie", back_populates="poll")
 
 
 class DailySummary(Base):

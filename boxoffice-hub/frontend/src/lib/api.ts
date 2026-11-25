@@ -296,3 +296,36 @@ export async function syncCatalog(): Promise<SyncCatalogResponse | null> {
     return null;
   }
 }
+
+export interface PollData {
+  avg_rating: number;
+  rating_count: number;
+  theatre_votes: number;
+  ott_votes: number;
+  skip_votes: number;
+  total_verdict_votes: number;
+}
+
+export async function fetchPoll(slug: string): Promise<PollData | null> {
+  try {
+    return await fetchJson<PollData>(`/api/movies/${encodeURIComponent(slug)}/poll`);
+  } catch (err) {
+    console.error("Failed to fetch poll:", err);
+    return null;
+  }
+}
+
+export async function votePoll(
+  slug: string,
+  payload: { rating?: number; verdict?: "theatre" | "ott" | "skip" }
+): Promise<PollData | null> {
+  try {
+    return await fetchJson<PollData>(`/api/movies/${encodeURIComponent(slug)}/poll`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.error("Failed to submit vote:", err);
+    return null;
+  }
+}

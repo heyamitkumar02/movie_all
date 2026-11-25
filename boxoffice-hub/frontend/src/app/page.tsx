@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Activity,
+  ArrowLeftRight,
   ArrowUpRight,
   Clapperboard,
   Flame,
@@ -243,15 +244,24 @@ export default function HomePage() {
               ALL-INDIA BOX OFFICE TELEMETRY · LIVE AUTO-SYNC
             </div>
 
-            <button
-              type="button"
-              onClick={handleSyncCatalog}
-              disabled={syncing}
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.05] px-4 py-1.5 text-xs font-semibold text-zinc-200 backdrop-blur-md transition hover:border-emerald/40 hover:bg-emerald/15 hover:text-white disabled:opacity-50"
-            >
-              <RefreshCw className={cn("h-3.5 w-3.5 text-emerald", syncing && "animate-spin")} />
-              {syncing ? "Syncing India Releases..." : "Sync Latest India Releases"}
-            </button>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Link
+                href="/compare"
+                className="inline-flex items-center gap-2 rounded-full border border-amber-gold/35 bg-amber-gold/10 px-4 py-1.5 text-xs font-semibold text-amber-gold backdrop-blur-md transition hover:border-amber-gold/60 hover:bg-amber-gold/20"
+              >
+                <ArrowLeftRight className="h-3.5 w-3.5" />
+                Compare Clash
+              </Link>
+              <button
+                type="button"
+                onClick={handleSyncCatalog}
+                disabled={syncing}
+                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.05] px-4 py-1.5 text-xs font-semibold text-zinc-200 backdrop-blur-md transition hover:border-emerald/40 hover:bg-emerald/15 hover:text-white disabled:opacity-50"
+              >
+                <RefreshCw className={cn("h-3.5 w-3.5 text-emerald", syncing && "animate-spin")} />
+                {syncing ? "Syncing India Releases..." : "Sync Latest India Releases"}
+              </button>
+            </div>
           </div>
 
           {syncBanner && (

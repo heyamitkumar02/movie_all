@@ -7,6 +7,7 @@ import { HeroBento } from "@/components/HeroBento";
 import { DaySelector } from "@/components/DaySelector";
 import { RunShapeChart } from "@/components/RunShapeChart";
 import { BreakdownTables } from "@/components/BreakdownTables";
+import { AudiencePoll } from "@/components/AudiencePoll";
 import { TrailerModal } from "@/components/TrailerModal";
 import { WhereToWatch } from "@/components/WhereToWatch";
 import { YoutubeReviewsSection } from "@/components/YoutubeReviewsSection";
@@ -191,6 +192,8 @@ export default function MovieDetailPage({
         />
 
         <WhereToWatch movie={movieData.movie} selectedDay={selectedDay} />
+
+        <AudiencePoll slug={movieData.movie.slug} movieTitle={movieData.movie.title} />
 
         <YoutubeReviewsSection
           reviews={reviewsData.reviews}

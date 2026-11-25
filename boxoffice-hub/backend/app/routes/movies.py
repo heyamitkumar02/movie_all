@@ -6,7 +6,7 @@ from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal, get_db
-from app.models import AdvanceBooking, DailySummary, Movie
+from app.models import AdvanceBooking, DailySummary, Movie, MoviePoll
 from app.schemas import (
     AdvanceBookingOut,
     BreakdownOut,
@@ -16,6 +16,8 @@ from app.schemas import (
     MovieDetailOut,
     MovieListItem,
     MovieOut,
+    PollOut,
+    PollVoteRequest,
     SyncCatalogResponse,
     TrackMovieRequest,
 )
@@ -455,3 +457,70 @@ def export_movie_report(
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+def _get_or_create_poll(movie: Movie, db: Session) -> MoviePoll:
+    poll = db.query(MoviePoll).filter(MoviePoll.movie_id == movie.id).first()
+    if poll:
+        return poll
+    base_count = 42 + (movie.id * 17) % 120
+    avg = 4.2 if movie.status == "RUNNING" else 4.0
+    poll = MoviePoll(
+        movie_id=movie.id,
+        rating_sum=round(base_count * avg, 1),
+        rating_count=base_count,
+        theatre_votes=int(base_count * 0.62),
+        ott_votes=int(base_count * 0.28),
+        skip_votes=max(1, base_count - int(base_count * 0.62) - int(base_count * 0.28)),
+    )
+    db.add(poll)
+    db.commit()
+    db.refresh(poll)
+    return poll
+
+
+def _serialize_poll(poll: MoviePoll) -> PollOut:
+    avg = round(poll.rating_sum / poll.rating_count, 1) if poll.rating_count > 0 else 0.0
+    total_v = poll.theatre_votes + poll.ott_votes + poll.skip_votes
+    return PollOut(
+        avg_rating=avg,
+        rating_count=poll.rating_count,
+        theatre_votes=poll.theatre_votes,
+        ott_votes=poll.ott_votes,
+        skip_votes=poll.skip_votes,
+        total_verdict_votes=total_v,
+    )
+
+
+@router.get("/{slug}/poll", response_model=PollOut)
+def get_movie_poll(slug: str, db: Session = Depends(get_db)):
+    movie = db.query(Movie).filter(Movie.slug == slug).first()
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+    poll = _get_or_create_poll(movie, db)
+    return _serialize_poll(poll)
+
+
+@router.post("/{slug}/poll", response_model=PollOut)
+def vote_movie_poll(slug: str, payload: PollVoteRequest, db: Session = Depends(get_db)):
+    movie = db.query(Movie).filter(Movie.slug == slug).first()
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+    poll = _get_or_create_poll(movie, db)
+
+    if payload.rating is not None:
+        clamped = max(1, min(5, int(payload.rating)))
+        poll.rating_sum += clamped
+        poll.rating_count += 1
+    if payload.verdict in ("theatre", "ott", "skip"):
+        if payload.verdict == "theatre":
+            poll.theatre_votes += 1
+        elif payload.verdict == "ott":
+            poll.ott_votes += 1
+        else:
+            poll.skip_votes += 1
+
+    db.add(poll)
+    db.commit()
+    db.refresh(poll)
+    return _serialize_poll(poll)

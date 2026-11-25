@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Calendar, Clapperboard, Film, Flame, Play, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowLeft, Calendar, Check, Clapperboard, Film, Flame, Play, Share2, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 import { Aurora } from "./reactbits/Aurora";
 import { TiltedCard } from "./reactbits/TiltedCard";
 import { SplitText } from "./reactbits/SplitText";
@@ -43,12 +43,51 @@ export function HeroBento({
   onWatchTrailer,
 }: HeroBentoProps) {
   const [imgFailed, setImgFailed] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [c1, c2, c3] = getMoodColors(movie.slug);
 
   const indiaGrossCr = kpis.india_gross / 10_000_000;
   const todayGrossCr = kpis.today_gross / 10_000_000;
   const isTodayInLakhs = todayGrossCr < 1 && kpis.today_gross > 0;
   const nextTargetIdx = milestones.findIndex((m) => !m.achieved);
+
+  const verdictLabel =
+    indiaGrossCr >= 500
+      ? "All-Time Blockbuster"
+      : indiaGrossCr >= 250
+      ? "Blockbuster"
+      : indiaGrossCr >= 100
+      ? "Super Hit"
+      : indiaGrossCr >= 50
+      ? "Hit"
+      : movie.status === "RUNNING"
+      ? "In Theatres"
+      : "Theatrical Run";
+
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `${movie.title} · BoxOffice Hub`,
+          text: `${movie.title} India Gross: ${kpis.india_gross_formatted}`,
+          url: shareUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        // ignore clipboard denial
+      }
+    }
+  };
 
   return (
     <section className="relative overflow-hidden border-b border-white/[0.08] pb-10 pt-6">
@@ -65,7 +104,10 @@ export function HeroBento({
             All Releases
           </Link>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="rounded-full border border-amber-gold/35 bg-amber-gold/15 px-3 py-1 text-xs font-semibold text-amber-gold">
+              {verdictLabel}
+            </span>
             {isLiveDay || movie.status === "RUNNING" ? (
               <span className="inline-flex items-center gap-2 rounded-full border border-emerald/30 bg-emerald/15 px-3.5 py-1 text-xs font-semibold tracking-wide text-emerald-400">
                 <span className="h-2 w-2 rounded-full bg-emerald animate-pulse-live" />
@@ -77,6 +119,14 @@ export function HeroBento({
                 THEATRICAL RUN · {activeDayLabel}
               </span>
             )}
+            <button
+              type="button"
+              onClick={handleShare}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-zinc-200 transition hover:border-emerald/40 hover:bg-emerald/15"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Share2 className="h-3.5 w-3.5" />}
+              {copied ? "Copied!" : "Share"}
+            </button>
           </div>
         </div>
 
@@ -94,16 +144,13 @@ export function HeroBento({
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full flex-col items-center justify-between bg-gradient-to-br from-zinc-900 via-zinc-950 to-emerald/20 p-6 text-center">
-                    <div className="rounded-full border border-amber-gold/30 bg-amber-gold/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-amber-gold">
+                  <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-zinc-900 via-zinc-950 to-emerald/20 p-6 pb-14 text-center">
+                    <div className="mb-4 rounded-full border border-amber-gold/30 bg-amber-gold/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-amber-gold">
                       BoxOffice Hub
                     </div>
-                    <div>
-                      <Clapperboard className="mx-auto mb-3 h-12 w-12 text-zinc-500" />
-                      <p className="font-display text-xl font-bold text-white">{movie.title}</p>
-                      <p className="mt-1 text-xs text-zinc-400">Dir. {movie.director}</p>
-                    </div>
-                    <div className="text-xs text-zinc-500">{movie.release_date}</div>
+                    <Clapperboard className="mx-auto mb-3 h-12 w-12 text-zinc-500" />
+                    <p className="font-display text-xl font-bold text-white">{movie.title}</p>
+                    <p className="mt-1 text-xs text-zinc-400">Dir. {movie.director}</p>
                   </div>
                 )}
 

@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -305,23 +306,21 @@ class YouTubeService:
         if not force_refresh and existing:
             return existing, "cache"
 
-        # Live fetch across all 10 curated channels
-        new_records: list[YoutubeReview] = []
+        # Live fetch across all 10 curated channels concurrently
         now = datetime.now(timezone.utc)
-        for ch in REVIEW_CHANNELS:
+
+        async def _fetch_one(ch: dict[str, str]) -> Optional[YoutubeReview]:
             query = f"{movie.title} review {ch['name']}"
             video = await self.search_best_video(query)
             if not video:
-                continue
-
+                return None
             pub_dt = now
             if video.get("published_at"):
                 try:
                     pub_dt = datetime.fromisoformat(str(video["published_at"]).replace("Z", "+00:00"))
                 except ValueError:
                     pub_dt = now
-
-            review = YoutubeReview(
+            return YoutubeReview(
                 movie_id=movie.id,
                 channel_name=ch["name"],
                 language=ch["language"],
@@ -334,7 +333,9 @@ class YouTubeService:
                 sentiment_tag=infer_sentiment(video["title"]),
                 fetched_at=now,
             )
-            new_records.append(review)
+
+        fetched_items = await asyncio.gather(*[_fetch_one(ch) for ch in REVIEW_CHANNELS], return_exceptions=True)
+        new_records: list[YoutubeReview] = [r for r in fetched_items if isinstance(r, YoutubeReview)]
 
         if new_records:
             db.query(YoutubeReview).filter(YoutubeReview.movie_id == movie.id).delete()

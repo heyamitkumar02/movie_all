@@ -200,3 +200,17 @@ class SyncCatalogResponse(BaseModel):
     added: int
     updated: int
     total_in_db: int
+
+
+class PollOut(BaseModel):
+    avg_rating: float
+    rating_count: int
+    theatre_votes: int
+    ott_votes: int
+    skip_votes: int
+    total_verdict_votes: int
+
+
+class PollVoteRequest(BaseModel):
+    rating: Optional[int] = None
+    verdict: Optional[str] = None  # "theatre" | "ott" | "skip"
