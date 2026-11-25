@@ -99,8 +99,9 @@ def _parse_iso_duration(iso_dur: str) -> str:
 
 
 class YouTubeService:
-    def __init__(self) -> None:
-        self.api_key = os.getenv("YOUTUBE_API_KEY", "").strip()
+    @property
+    def api_key(self) -> str:
+        return os.getenv("YOUTUBE_API_KEY", "").strip()
 
     async def _search_youtube_api(self, query: str, max_results: int = 1) -> list[dict[str, Any]]:
         if not self.api_key:
