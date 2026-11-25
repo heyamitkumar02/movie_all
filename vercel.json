@@ -1,0 +1,26 @@
+{
+  "services": {
+    "frontend": {
+      "root": "boxoffice-hub/frontend",
+      "framework": "nextjs"
+    },
+    "backend": {
+      "root": "boxoffice-hub/backend",
+      "entrypoint": "main:app"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "frontend"
+      }
+    }
+  ]
+}

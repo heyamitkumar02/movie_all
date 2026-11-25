@@ -5,10 +5,10 @@ from datetime import datetime, timezone
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import Base, SessionLocal, engine
+from app.database import Base, IS_VERCEL, SessionLocal, engine
 from app.models import DailySummary, Movie
 from app.routes.media import router as media_router
 from app.routes.movies import router as movies_router
@@ -20,6 +20,28 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("boxoffice-hub")
 
 scheduler = BackgroundScheduler()
+_db_bootstrapped = False
+
+
+def ensure_db_bootstrapped() -> None:
+    """Create tables, seed flagship titles, and sync Indian catalog on first startup."""
+    global _db_bootstrapped
+    if _db_bootstrapped:
+        return
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        seed_database(db)
+        if db.query(Movie).count() <= 10:
+            try:
+                stats = sync_sacnilk_catalog(db, max_movies=120)
+                logger.info("Initial Indian Box Office catalog synced: %s", stats)
+            except Exception as exc:
+                logger.warning("Initial catalog sync skipped/failed: %s", exc)
+        _db_bootstrapped = True
+        logger.info("Database ready with %d movies.", db.query(Movie).count())
+    finally:
+        db.close()
 
 
 def refresh_live_tracking_pulse() -> None:
@@ -57,27 +79,29 @@ def scheduled_india_catalog_sync() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        seed_database(db)
-        if db.query(Movie).count() <= 10:
-            try:
-                stats = sync_sacnilk_catalog(db, max_movies=120)
-                logger.info("Initial Indian Box Office catalog synced: %s", stats)
-            except Exception as exc:
-                logger.warning("Initial catalog sync skipped/failed: %s", exc)
-        logger.info("Database ready with %d movies.", db.query(Movie).count())
-    finally:
-        db.close()
+    ensure_db_bootstrapped()
 
-    scheduler.add_job(refresh_live_tracking_pulse, "interval", minutes=5, id="live_pulse", replace_existing=True)
-    scheduler.add_job(scheduled_india_catalog_sync, "interval", hours=6, id="india_catalog_sync", replace_existing=True)
-    scheduler.start()
+    if not IS_VERCEL:
+        scheduler.add_job(
+            refresh_live_tracking_pulse,
+            "interval",
+            minutes=5,
+            id="live_pulse",
+            replace_existing=True,
+        )
+        scheduler.add_job(
+            scheduled_india_catalog_sync,
+            "interval",
+            hours=6,
+            id="india_catalog_sync",
+            replace_existing=True,
+        )
+        scheduler.start()
     try:
         yield
     finally:
-        scheduler.shutdown(wait=False)
+        if not IS_VERCEL and scheduler.running:
+            scheduler.shutdown(wait=False)
 
 
 app = FastAPI(
@@ -89,7 +113,7 @@ app = FastAPI(
 
 cors_origins = [
     origin.strip()
-    for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+    for origin in os.getenv("CORS_ORIGINS", "*").split(",")
     if origin.strip()
 ]
 
@@ -101,13 +125,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def bootstrap_middleware(request: Request, call_next):
+    ensure_db_bootstrapped()
+    return await call_next(request)
+
+
 app.include_router(movies_router)
 app.include_router(media_router)
 
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok", "service": "boxoffice-hub-api"}
+    return {"status": "ok", "service": "boxoffice-hub-api", "vercel": IS_VERCEL}
 
 
 if __name__ == "__main__":

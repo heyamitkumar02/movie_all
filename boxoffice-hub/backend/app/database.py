@@ -5,7 +5,12 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./boxoffice.db")
+IS_VERCEL = bool(os.getenv("VERCEL"))
+DEFAULT_DB = "sqlite:////tmp/boxoffice.db" if IS_VERCEL else "sqlite:///./boxoffice.db"
+DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or DEFAULT_DB
+
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
