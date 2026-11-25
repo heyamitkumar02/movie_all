@@ -7,6 +7,7 @@ import { HeroBento } from "@/components/HeroBento";
 import { DaySelector } from "@/components/DaySelector";
 import { RunShapeChart } from "@/components/RunShapeChart";
 import { BreakdownTables } from "@/components/BreakdownTables";
+import { AdSlot } from "@/components/AdSlot";
 import { AudiencePoll } from "@/components/AudiencePoll";
 import { TrailerModal } from "@/components/TrailerModal";
 import { WhereToWatch } from "@/components/WhereToWatch";
@@ -203,6 +204,11 @@ export default function MovieDetailPage({
         />
 
         <WhereToWatch movie={movieData.movie} selectedDay={selectedDay} />
+
+        <AdSlot
+          slotId={process.env.NEXT_PUBLIC_ADSENSE_SLOT_MOVIE}
+          format="horizontal"
+        />
 
         <AudiencePoll slug={movieData.movie.slug} movieTitle={movieData.movie.title} />
 

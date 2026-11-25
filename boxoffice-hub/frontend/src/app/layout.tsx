@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import { SiteFooter } from "@/components/SiteFooter";
 import "./globals.css";
 
 const inter = Inter({
@@ -51,6 +53,8 @@ export const metadata: Metadata = {
   },
 };
 
+const adsenseClient = process.env.NEXT_PUBLIC_ADSENSE_CLIENT?.trim();
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -58,8 +62,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`dark ${inter.variable} ${jakarta.variable}`}>
-      <body className="min-h-screen bg-obsidian font-sans text-zinc-100 antialiased selection:bg-emerald/30 selection:text-white">
-        {children}
+      <body className="flex min-h-screen flex-col bg-obsidian font-sans text-zinc-100 antialiased selection:bg-emerald/30 selection:text-white">
+        {adsenseClient && (
+          <Script
+            id="adsense-script"
+            async
+            strategy="afterInteractive"
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
+            crossOrigin="anonymous"
+          />
+        )}
+        <div className="flex-1">{children}</div>
+        <SiteFooter />
       </body>
     </html>
   );

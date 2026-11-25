@@ -19,6 +19,7 @@ import {
   Sparkles,
   TrendingUp,
 } from "lucide-react";
+import { AdSlot } from "@/components/AdSlot";
 import { Aurora } from "@/components/reactbits/Aurora";
 import { SplitText } from "@/components/reactbits/SplitText";
 import { SpotlightCard } from "@/components/reactbits/SpotlightCard";
@@ -597,6 +598,12 @@ export default function HomePage() {
                 </button>
               </div>
             )}
+
+            <AdSlot
+              slotId={process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME}
+              format="horizontal"
+              className="mt-8"
+            />
           </>
         )}
       </section>
