@@ -41,6 +41,7 @@ export default function MovieDetailPage({
     source: "cache",
   });
   const [loading, setLoading] = useState(true);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
   const [dayLoading, setDayLoading] = useState(false);
   const [trailerOpen, setTrailerOpen] = useState(false);
   const [refreshingReviews, setRefreshingReviews] = useState(false);
@@ -48,14 +49,12 @@ export default function MovieDetailPage({
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setReviewsLoading(true);
 
-    Promise.all([fetchMovieDetail(slug), fetchTrailer(slug), fetchReviews(slug)])
-      .then(([detail, trailerRes, reviewsRes]) => {
+    fetchMovieDetail(slug)
+      .then((detail) => {
         if (!active) return;
         setMovieData(detail);
-        setTrailer(trailerRes);
-        setReviewsData(reviewsRes);
-
         if (detail && detail.daily_summaries.length > 0) {
           const latestDay = detail.daily_summaries[detail.daily_summaries.length - 1].day_number;
           setSelectedDay(latestDay);
@@ -63,6 +62,18 @@ export default function MovieDetailPage({
       })
       .finally(() => {
         if (active) setLoading(false);
+      });
+
+    fetchTrailer(slug).then((trailerRes) => {
+      if (active) setTrailer(trailerRes);
+    });
+
+    fetchReviews(slug)
+      .then((reviewsRes) => {
+        if (active) setReviewsData(reviewsRes);
+      })
+      .finally(() => {
+        if (active) setReviewsLoading(false);
       });
 
     return () => {
@@ -200,6 +211,7 @@ export default function MovieDetailPage({
           sentimentDistribution={reviewsData.sentiment_distribution}
           onRefreshReviews={handleRefreshReviews}
           isRefreshing={refreshingReviews}
+          loading={reviewsLoading}
         />
 
         {refreshingReviews && (

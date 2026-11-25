@@ -9,8 +9,7 @@ import httpx
 from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
-from app.config.review_channels import REVIEW_CHANNELS
-from app.models import DailyBreakdown, DailySummary, Movie, YoutubeReview
+from app.models import DailyBreakdown, DailySummary, Movie
 from app.services.seed_data import build_breakdowns_for_day
 from app.utils.currency import parse_inr
 
@@ -154,29 +153,6 @@ def materialize_breakdowns_for_summary(movie: Movie, summary: DailySummary, db: 
         .order_by(DailyBreakdown.gross_inr.desc())
         .all()
     )
-
-
-def _seed_default_reviews(movie: Movie, db: Session, now: datetime) -> None:
-    if db.query(YoutubeReview).filter(YoutubeReview.movie_id == movie.id).count() > 0:
-        return
-    vid_fallback = movie.trailer_video_id or "dQw4w9WgXcQ"
-    sentiments = ["Positive", "Positive", "Mixed", "Positive", "Mixed", "Positive", "Neutral", "Positive", "Mixed", "Positive"]
-    for idx, ch in enumerate(REVIEW_CHANNELS):
-        db.add(
-            YoutubeReview(
-                movie_id=movie.id,
-                channel_name=ch["name"],
-                language=ch["language"],
-                video_id=vid_fallback,
-                title=f"{movie.title} Movie Review | {ch['name']}",
-                thumbnail_url=f"https://i.ytimg.com/vi/{vid_fallback}/hqdefault.jpg",
-                view_count=max(45000, 420000 - idx * 32000),
-                published_at=now - timedelta(days=max(1, idx)),
-                duration=f"{9 + idx % 7}:{12 + idx * 4:02d}",
-                sentiment_tag=sentiments[idx],
-                fetched_at=now,
-            )
-        )
 
 
 def sync_sacnilk_catalog(db: Session, max_movies: int = 120) -> dict[str, int]:
@@ -386,7 +362,6 @@ def sync_sacnilk_catalog(db: Session, max_movies: int = 120) -> dict[str, int]:
         # Pre-materialize Day 1 breakdown only (other days materialize lazily on click)
         if summaries:
             materialize_breakdowns_for_summary(movie, summaries[0], db)
-        _seed_default_reviews(movie, db, now)
         added += 1
 
     db.commit()
@@ -588,7 +563,6 @@ def create_or_get_tracked_movie(payload: dict[str, Any], db: Session) -> Movie:
     db.flush()
     if summaries:
         materialize_breakdowns_for_summary(movie, summaries[0], db)
-    _seed_default_reviews(movie, db, now)
     db.commit()
     db.refresh(movie)
     return movie

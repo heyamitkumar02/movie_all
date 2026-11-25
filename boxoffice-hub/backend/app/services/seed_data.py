@@ -279,6 +279,14 @@ def seed_database(db: Session) -> None:
                 updated = True
         if updated:
             db.commit()
+        # Clean up any legacy Rick Astley placeholder reviews from older runs
+        deleted_placeholders = (
+            db.query(YoutubeReview)
+            .filter(YoutubeReview.video_id == "dQw4w9WgXcQ")
+            .delete(synchronize_session=False)
+        )
+        if deleted_placeholders:
+            db.commit()
         return
 
     now = datetime.now(timezone.utc)
@@ -601,24 +609,6 @@ def seed_database(db: Session) -> None:
                 )
             )
 
-        for idx, ch in enumerate(REVIEW_CHANNELS):
-            vid_id, vid_title, view_cnt, dur = spec["review_videos"][idx]
-            sentiment = spec["sentiments"][idx]
-            pub_dt = datetime.combine(spec["release_date"] + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc) + timedelta(hours=idx * 3)
-            db.add(
-                YoutubeReview(
-                    movie_id=movie.id,
-                    channel_name=ch["name"],
-                    language=ch["language"],
-                    video_id=vid_id,
-                    title=vid_title,
-                    thumbnail_url=f"https://i.ytimg.com/vi/{spec['trailer_video_id']}/hqdefault.jpg" if len(vid_id) != 11 else f"https://i.ytimg.com/vi/{vid_id}/hqdefault.jpg",
-                    view_count=view_cnt,
-                    published_at=pub_dt,
-                    duration=dur,
-                    sentiment_tag=sentiment,
-                    fetched_at=now,
-                )
-            )
+        # Reviews are fetched live from Top 10 YouTube channels on demand and cached for 24h
 
     db.commit()

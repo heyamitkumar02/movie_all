@@ -13,6 +13,7 @@ interface YoutubeReviewsSectionProps {
   sentimentDistribution: Record<string, SentimentBucket>;
   onRefreshReviews?: () => Promise<void>;
   isRefreshing?: boolean;
+  loading?: boolean;
 }
 
 const SENTIMENT_META: Record<string, { color: string; bar: string; badge: string }> = {
@@ -43,6 +44,7 @@ export function YoutubeReviewsSection({
   sentimentDistribution,
   onRefreshReviews,
   isRefreshing = false,
+  loading = false,
 }: YoutubeReviewsSectionProps) {
   const [langFilter, setLangFilter] = useState<"All" | "Hindi" | "Telugu">("All");
   const [activeVideo, setActiveVideo] = useState<VideoModalData | null>(null);
@@ -149,6 +151,17 @@ export function YoutubeReviewsSection({
       </div>
 
       {/* Reviews Grid */}
+      {loading ? (
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, idx) => (
+            <div key={idx} className="glass-card h-64 animate-pulse p-3.5">
+              <div className="aspect-video w-full rounded-xl bg-zinc-800/80" />
+              <div className="mt-3 h-3 w-1/2 rounded bg-zinc-800" />
+              <div className="mt-2 h-4 w-5/6 rounded bg-zinc-800" />
+            </div>
+          ))}
+        </div>
+      ) : (
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {filteredReviews.map((review) => {
           const sentimentStyle = SENTIMENT_META[review.sentiment_tag] || SENTIMENT_META.Neutral;
@@ -222,6 +235,7 @@ export function YoutubeReviewsSection({
           );
         })}
       </div>
+      )}
 
       <TrailerModal
         isOpen={Boolean(activeVideo)}
